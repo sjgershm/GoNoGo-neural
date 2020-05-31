@@ -82,6 +82,32 @@ function plot_figures(fig,data,results)
             
         case 'figS1'
             
+            C = 5;
+            
+            for i = 1:2
+                if i ==1
+                    load results_cavanagh
+                else
+                    load results_guitartmasip
+                end
+                latents = results(2).latents;
+                
+                for s = 1:length(latents)
+                    L = results(2).latents(s).L;
+                    w = 1./(1+exp(-L));
+                    W(s,:,i) = interval_stats(w,1:length(L),C);
+                end
+            end
+            
+            [se,m] = wse(W);
+            errorbar(m,se,'LineWidth',4);
+            set(gca,'FontSize',25,'XTickLabel',{'1st' '2nd' '3rd' '4th'},'XTick',1:4,'XLim',[0.5 4.5]);
+            ylabel('Pavlovian weight','FontSize',25);
+            xlabel('Trial epoch (quarters)','FontSize',25);
+            legend({'EEG data set' 'fMRI data set'},'FontSize',25);
+            
+        case 'figS2'
+            
             load cavanagh_data
             load results_cavanagh
             
@@ -106,7 +132,7 @@ function plot_figures(fig,data,results)
             
             legend(labels,'FontSize',20,'Location','NorthWest','Box','Off');
             
-        case 'figS2'
+        case 'figS3'
             
             load guitartmasip_data
             load results_guitartmasip
@@ -358,4 +384,16 @@ function [m,se,X] = quantile_stats(x,y,N)
         se(i) = nanstd(x(ix))./sqrt(sum(~isnan(x(ix))));
     end
     
+end
+
+function [m,se,X] = interval_stats(x,y,N)
+    
+    q = linspace(min(y),max(y),N);
+    
+    for i = 1:length(q)-1
+        ix = y>q(i) & y<=q(i+1);
+        X{i} = x(ix);
+        m(i) = nanmean(x(ix));
+        se(i) = nanstd(x(ix))./sqrt(sum(~isnan(x(ix))));
+    end
 end
