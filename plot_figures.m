@@ -82,6 +82,20 @@ function plot_figures(fig,data,results)
             
         case 'figS1'
             
+            load guitartmasip_data.mat
+            subplot(1,2,1);
+            plot_figures('accuracy',data)
+            title('Guitart-Masip et al. (2012)','FontSize',25,'FontWeight','Bold');
+            
+            load results_guitartmasip_sim.mat
+            subplot(1,2,2);
+            plot_figures('accuracy',data)
+            title('Model simulation','FontSize',25,'FontWeight','Bold');
+            
+            set(gcf,'Position',[200 200 1000 500])
+            
+        case 'figS2'
+            
             C = 5;
             
             for i = 1:2
@@ -106,7 +120,7 @@ function plot_figures(fig,data,results)
             xlabel('Trial epoch (quarters)','FontSize',25);
             legend({'EEG data set' 'fMRI data set'},'FontSize',25);
             
-        case 'figS2'
+        case 'figS3'
             
             load cavanagh_data
             load results_cavanagh
@@ -132,7 +146,7 @@ function plot_figures(fig,data,results)
             
             legend(labels,'FontSize',20,'Location','NorthWest','Box','Off');
             
-        case 'figS3'
+        case 'figS4'
             
             load guitartmasip_data
             load results_guitartmasip
@@ -168,6 +182,24 @@ function plot_figures(fig,data,results)
             end
             
             set(gcf,'Position',[200 200 1400 500]);
+            
+        case 'figS5'
+            
+            load results_cavanagh.mat
+            x = results(2).x;
+            load results_guitartmasip.mat
+            x = [x; results(2).x];
+            L = {'Inverse temperature' 'Instrumental prior mean' 'Instrumental prior confidence' 'Pavlovian prior mean' 'Pavlovian prior confidence'};
+            
+            for i = 1:size(x,2)
+                subplot(2,3,i);
+                hist(x(:,i));
+                set(gca,'FontSize',25);
+                ylabel('Frequency','FontSize',25);
+                xlabel(L{i});
+            end
+            
+            set(gcf,'Position',[200 200 1300 600])
             
         case 'gobias_early_late'
             
@@ -222,7 +254,41 @@ function plot_figures(fig,data,results)
             z = squeeze(mean(x,3));
             [~,p,~,stat] = ttest(z(:,1),z(:,end));
             disp(['t(',num2str(stat.df),') = ',num2str(stat.tstat),', p = ',num2str(p)])
+         
+        case 'accuracy'
             
+            for s = 1:length(data)
+                for i = 1:4
+                    ix = data(s).s==i;
+                    acc(s,i) = mean(data(s).acc(ix));
+                end
+            end
+            
+            [se,m] = wse(acc);
+            barerrorbar(m',se');
+            colormap bone
+            set(gca,'XTickLabel',{'Go-to-win' 'Go-to-avoid' 'NoGo-to-win' 'NoGo-to-avoid'},'FontSize',25,'XLim',[0.5 4.5]);
+            ylabel('Probability correct','FontSize',25);
+            xtickangle(gca,45);
+            
+        case 'cavanagh_pavbias_individual'
+            
+            load cavanagh_data
+            load results_cavanagh
+            
+            for s = 1:length(data)
+                rew_go = sum(data(s).a(data(s).s==1|data(s).s==3)==2)./sum(data(s).a==2);
+                pun_nogo = sum(data(s).a(data(s).s==2|data(s).s==4)==1)./sum(data(s).a==1);
+                pav_bias(s,1) = 0.5*rew_go + 0.5*pun_nogo;
+                L = results(2).latents(s).L;
+                w = 1./(1+exp(-L));
+                W(s,1) = mean(w);
+                x = quantile_stats(data(s).y,w,N);
+                d(s,1) = x(1)-x(end);
+            end
+            
+            [r,p] = corr(pav_bias(ix),d(ix))
+        
         case 'guitartmasip_IFG_weight'
             
             load guitartmasip_data
@@ -289,7 +355,8 @@ function plot_figures(fig,data,results)
             
             for s = 1:length(data)
                 L = results(2).latents(s).L;
-                w = 1./(1+exp(-L));
+                %w = 1./(1+exp(-L));
+                w = results(2).latents(s).acc;
                 ix = data(s).s==1|data(s).s==3;
                 x(s,:,1) = quantile_stats(data(s).vmPFC(ix),w(ix),N);
                 ix = data(s).s==2|data(s).s==4;
